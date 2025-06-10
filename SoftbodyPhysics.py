@@ -4,29 +4,6 @@ import math
 import time
 pygame.init()
 
-screen_width = 800
-screen_height = 800
-# Set up the display.
-screen = pygame.display.set_mode((screen_width, screen_height))
-center_x = screen_width / 2
-center_y = screen_height / 2
-WHITE = (255, 255, 255)
-BLUE = (0, 0, 255)
-RED = (255, 0, 0)
-
-def clamp(value, min, max):
-    if value < min:
-        value = min
-    elif value > max:
-        value = max
-    return value
-
-k = 1/10
-dampen = 0.99
-particle_size = 10
-particles = set()
-springs = []
-
 class Vec2:
     def __init__(self, x = 0, y = 0):
         self.x = x
@@ -42,8 +19,28 @@ class Vec2:
 
     def __sub__(self, other):
         return Vec2(self.x - other.x, self.y - other.y)
+    
+screen_width = 800
+screen_height = 800
+# Set up the display.
+screen = pygame.display.set_mode((screen_width, screen_height))
+center_x = screen_width / 2
+center_y = screen_height / 2
+origin = Vec2(center_x, center_y)
+WHITE = (255, 255, 255)
+BLUE = (0, 0, 255)
+RED = (255, 0, 0)
 
+def clamp(value, min, max):
+    if value < min:
+        value = min
+    elif value > max:
+        value = max
+    return value
 
+k = 1/10
+dampen = 0.99
+particle_size = 7
 class Particle:
     position = Vec2()
     velocity = Vec2()
@@ -73,23 +70,22 @@ class Particle:
         return pygame.Rect(self.position.x-self.radius, self.position.y-self.radius, self.width, self.height)
     
 class Spring:
-    def __init__(self, pivot, bob, elastic_limit = 10):
+    def __init__(self, pivot, bob, spring_constant_k = 0.01, elastic_limit = 10):
         self.pivot = pivot
         self.bob = bob
         self.offset = bob.position - pivot.position
         self.elastic_limit = elastic_limit
-        particles.add(pivot)
-        particles.add(bob)
+        self.k = spring_constant_k
 
     def update(self):
         x = self.bob.position - (self.pivot.position + self.offset)
-        self.bob.velocity.x += -k*x.x
-        self.bob.velocity.y += -k*x.y
+        self.bob.velocity.x += -self.k*x.x
+        self.bob.velocity.y += -self.k*x.y
         self.bob.velocity.x *= dampen
         self.bob.velocity.y *= dampen
         x = (self.pivot.position + self.offset) - self.bob.position 
-        self.pivot.velocity.x += -k*x.x
-        self.pivot.velocity.y += -k*x.y
+        self.pivot.velocity.x += -self.k*x.x
+        self.pivot.velocity.y += -self.k*x.y
         self.pivot.velocity.x *= dampen
         self.pivot.velocity.y *= dampen
         
@@ -97,10 +93,10 @@ class Spring:
         pygame.draw.line(screen, (RED), (self.pivot.position.x, self.pivot.position.y), (self.bob.position.x, self.bob.position.y))
 
 class Softbody(Particle):
-    particles = []
-    springs = []
     def __init__(self, x, y, size = particle_size, color = WHITE):
         super().__init__(x, y, size, color)
+        self.particles = []
+        self.springs = []
     
     def add_spring(self, spring):
             self.springs.append(spring)
@@ -127,16 +123,21 @@ class SoftbodyCircle(Softbody):
         for i in range(1, len(self.particles)):
             self.springs.append(Spring(self.particles[i], self.particles[0]))
 
-rope = Softbody(screen_width/2, screen_height/2)
-rope.add_spring(Spring(Particle(screen_width/2, screen_height/2), Particle(screen_width/2, screen_height/2 + 25)))
-for i in range(5):
-    rope.add_spring(Spring(rope.springs[i].bob, Particle(screen_width/2, rope.springs[i].bob.position.y + 25)))
-# rope.springs.append(Spring(rope.springs[0].bob, Particle(screen_width/2, screen_height/2 + 200, color=RED)))
+rope = Softbody(center_x, center_y)
+rope.add_spring(Spring(Particle(center_x, center_y), Particle(center_x, center_y + 25)))
+for i in range(10):
+    rope.add_spring(Spring(rope.springs[i].bob, Particle(center_x, rope.springs[i].bob.position.y + 25)))
+
+rope2 = Softbody(center_x+200, center_y)
+rope2.add_spring(Spring(Particle(rope2.position.x, rope2.position.y), Particle(rope2.position.x, rope2.position.y + 15), spring_constant_k=0.01))
+for i in range(20):
+    rope2.add_spring(Spring(rope2.springs[i].bob, Particle(rope2.springs[i].bob.position.x, rope2.springs[i].bob.position.y + 15), spring_constant_k=0.01))
 
 softbodies = [
-    SoftbodyCircle(Vec2(screen_width/2, screen_height/2)),
+    SoftbodyCircle(Vec2(center_x, center_y)),
     SoftbodyCircle(Vec2(0, 0), 36),
-    rope
+    rope,
+    rope2
 ]
 grabbing = None
 def update():
@@ -144,9 +145,10 @@ def update():
     (x, y) = pygame.mouse.get_pos()
     if pygame.mouse.get_pressed()[0]:
         if grabbing == None:
-            for particle in particles:
-                if particle.rect().collidepoint(x, y):
-                    grabbing = particle
+            for body in softbodies:
+                for particle in body.particles:
+                    if particle.rect().collidepoint(x, y):
+                        grabbing = particle
         else:
             grabbing.position.x = x
             grabbing.position.y = y
@@ -166,11 +168,6 @@ def update():
     if keys[pygame.K_s]:
         softbodies[0].particles[0].velocity.y += 10
 
-    # for particle in particles:
-    #     particle.update()
-    # for spring in springs:
-    #     spring.update()
-
     for body in softbodies:
         body.update()
         for particle in body.particles:
@@ -189,12 +186,6 @@ def draw():
             particle.draw()
         for spring in body.springs:
             spring.draw()
-
-    # for particle in particles:
-    #     particle.draw()
-    # for spring in springs:
-    #     spring.draw()    
-
 
     # Update the display
     pygame.display.flip()
