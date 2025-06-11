@@ -38,9 +38,8 @@ def clamp(value, min, max):
         value = max
     return value
 
-k = 1/10
 dampen = 0.99
-particle_size = 7
+particle_size = 10
 class Particle:
     position = Vec2()
     velocity = Vec2()
@@ -70,11 +69,10 @@ class Particle:
         return pygame.Rect(self.position.x-self.radius, self.position.y-self.radius, self.width, self.height)
     
 class Spring:
-    def __init__(self, pivot, bob, spring_constant_k = 0.01, elastic_limit = 10):
+    def __init__(self, pivot, bob, spring_constant_k = 0.01):
         self.pivot = pivot
         self.bob = bob
         self.offset = bob.position - pivot.position
-        self.elastic_limit = elastic_limit
         self.k = spring_constant_k
 
     def update(self):
@@ -104,10 +102,11 @@ class Softbody(Particle):
             self.particles.append(spring.bob)
 
 class SoftbodyCircle(Softbody):
-    def __init__(self, position, num_particles = 10):
+    def __init__(self, position, num_particles = 10, spring_constant_k = 0.01):
         self.position = Vec2(position.x, position.y)
         self.particles = [Particle(self.position.x, self.position.y, particle_size, RED)]
         self.springs = []
+        self.k = spring_constant_k
 
         # Create particles
         angle = 360 / num_particles
@@ -116,28 +115,54 @@ class SoftbodyCircle(Softbody):
         
         # Create springs
         for i in range(0, len(self.particles)-1):
-            self.springs.append(Spring(self.particles[i], self.particles[i+1]))
+            self.springs.append(Spring(self.particles[i], self.particles[i+1], spring_constant_k=self.k))
         # close loop
-        self.springs.append(Spring(self.particles[1], self.particles[len(self.particles)-1]))
+        self.springs.append(Spring(self.particles[1], self.particles[len(self.particles)-1], spring_constant_k=self.k))
         # center connection
         for i in range(1, len(self.particles)):
-            self.springs.append(Spring(self.particles[i], self.particles[0]))
+            self.springs.append(Spring(self.particles[i], self.particles[0], spring_constant_k=self.k))
+
+class Cloth(Softbody):
+    def __init__(self, position, width, height, spring_constant_k = 0.01):
+        super().__init__(position.x, position.y)
+        self.particles = []
+        self.springs = []
+        self.k = spring_constant_k
+        self.position = position
+        spacing = 15
+        cols = []
+        rows = []
+        cols.append(Spring(Particle(self.position.x, self.position.y), Particle(self.position.x + spacing, self.position.y), spring_constant_k=self.k))
+        for r in range(height):
+            for c in range(width):
+                spring = (Spring(cols[c].bob, Particle(cols[c].bob.position.x + spacing, cols[c].bob.position.y + (r*spacing)), spring_constant_k=self.k))
+                cols.append(spring)
+                self.add_spring(spring)
+
+def create_rope(position):
+    pass
+
+cloth = Cloth(origin, 5, 5, 0.001)
 
 rope = Softbody(center_x, center_y)
-rope.add_spring(Spring(Particle(center_x, center_y), Particle(center_x, center_y + 25)))
 for i in range(10):
-    rope.add_spring(Spring(rope.springs[i].bob, Particle(center_x, rope.springs[i].bob.position.y + 25)))
+    if i == 0:
+        rope.add_spring(Spring(Particle(center_x, center_y), Particle(center_x, center_y + 25), spring_constant_k=0.1))
+    rope.add_spring(Spring(rope.springs[i].bob, Particle(center_x, rope.springs[i].bob.position.y + 25), spring_constant_k=0.1))
 
-rope2 = Softbody(center_x+200, center_y)
-rope2.add_spring(Spring(Particle(rope2.position.x, rope2.position.y), Particle(rope2.position.x, rope2.position.y + 15), spring_constant_k=0.01))
+rope2 = Softbody(center_x+100, center_y)
 for i in range(20):
+    if i == 0:
+        rope2.add_spring(Spring(Particle(rope2.position.x, rope2.position.y), Particle(rope2.position.x, rope2.position.y + 15), spring_constant_k=0.01))
     rope2.add_spring(Spring(rope2.springs[i].bob, Particle(rope2.springs[i].bob.position.x, rope2.springs[i].bob.position.y + 15), spring_constant_k=0.01))
 
 softbodies = [
-    SoftbodyCircle(Vec2(center_x, center_y)),
+    SoftbodyCircle(Vec2(center_x, center_y), spring_constant_k = 0.1), 
+    SoftbodyCircle(Vec2(center_x, center_y), 36, spring_constant_k = 0.1),
     SoftbodyCircle(Vec2(0, 0), 36),
     rope,
-    rope2
+    rope2,
+    cloth
 ]
 grabbing = None
 def update():
