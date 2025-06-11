@@ -3,6 +3,8 @@ import random
 import math
 import time
 pygame.init()
+title = pygame.font.SysFont("Arial", 30)
+font = pygame.font.SysFont('Arial', 20)
 
 class Vec2:
     def __init__(self, x = 0, y = 0):
@@ -24,6 +26,7 @@ screen_width = 800
 screen_height = 800
 # Set up the display.
 screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Softbody Physics")
 center_x = screen_width / 2
 center_y = screen_height / 2
 origin = Vec2(center_x, center_y)
@@ -91,36 +94,44 @@ class Spring:
         pygame.draw.line(screen, (RED), (self.pivot.position.x, self.pivot.position.y), (self.bob.position.x, self.bob.position.y))
 
 class Softbody(Particle):
-    def __init__(self, x, y, size = particle_size, color = WHITE):
+    def __init__(self, x, y, size = particle_size, spring_constant_k = 0.01, color = WHITE):
         super().__init__(x, y, size, color)
         self.particles = []
         self.springs = []
-    
+        self.k = spring_constant_k
+
     def add_spring(self, spring):
             self.springs.append(spring)
             self.particles.append(spring.pivot)
             self.particles.append(spring.bob)
 
 class SoftbodyCircle(Softbody):
-    def __init__(self, position, num_particles = 10, spring_constant_k = 0.01):
+    def __init__(self, position, radius = 75, num_particles = 10, spring_constant_k = 0.01, exclude_center = False):
         self.position = Vec2(position.x, position.y)
-        self.particles = [Particle(self.position.x, self.position.y, particle_size, RED)]
-        self.springs = []
         self.k = spring_constant_k
+        self.particles = []
+        self.springs = []
+
+        if not exclude_center:
+            self.particles.append(Particle(self.position.x, self.position.y, particle_size, RED))
 
         # Create particles
         angle = 360 / num_particles
         for i in range(num_particles):
-            self.particles.append(Particle(self.position.x + (100*math.cos((math.pi*i*angle)/180)), self.position.y + (100*math.sin((math.pi*angle*i)/180)), particle_size, WHITE))
+            self.particles.append(Particle(self.position.x + (radius*math.cos((math.pi*i*angle)/180)), self.position.y + (radius*math.sin((math.pi*angle*i)/180)), particle_size, WHITE))
         
         # Create springs
         for i in range(0, len(self.particles)-1):
             self.springs.append(Spring(self.particles[i], self.particles[i+1], spring_constant_k=self.k))
         # close loop
-        self.springs.append(Spring(self.particles[1], self.particles[len(self.particles)-1], spring_constant_k=self.k))
-        # center connection
-        for i in range(1, len(self.particles)):
-            self.springs.append(Spring(self.particles[i], self.particles[0], spring_constant_k=self.k))
+        if exclude_center:
+            self.springs.append(Spring(self.particles[0], self.particles[len(self.particles)-1], spring_constant_k=self.k))
+        else:
+            self.springs.append(Spring(self.particles[1], self.particles[len(self.particles)-1], spring_constant_k=self.k))
+        if not exclude_center:
+            # center connection
+            for i in range(1, len(self.particles)):
+                self.springs.append(Spring(self.particles[i], self.particles[0], spring_constant_k=self.k))
 
 class Cloth(Softbody):
     def __init__(self, position, width, height, spring_constant_k = 0.01):
@@ -139,31 +150,28 @@ class Cloth(Softbody):
                 cols.append(spring)
                 self.add_spring(spring)
 
-def create_rope(position):
-    pass
+def create_rope(position, n_particles, k):
+    rope = Softbody(position[0], position[1], spring_constant_k=k)
+    for i in range(n_particles):
+        if i == 0:
+            rope.add_spring(Spring(Particle(rope.position.x, rope.position.y), Particle(rope.position.x, rope.position.y + 15), spring_constant_k=k))
+        rope.add_spring(Spring(rope.springs[i].bob, Particle(rope.springs[i].bob.position.x, rope.springs[i].bob.position.y + 15), spring_constant_k=k))
+    return rope
 
 cloth = Cloth(origin, 5, 5, 0.001)
 
-rope = Softbody(center_x, center_y)
-for i in range(10):
-    if i == 0:
-        rope.add_spring(Spring(Particle(center_x, center_y), Particle(center_x, center_y + 25), spring_constant_k=0.1))
-    rope.add_spring(Spring(rope.springs[i].bob, Particle(center_x, rope.springs[i].bob.position.y + 25), spring_constant_k=0.1))
-
-rope2 = Softbody(center_x+100, center_y)
-for i in range(20):
-    if i == 0:
-        rope2.add_spring(Spring(Particle(rope2.position.x, rope2.position.y), Particle(rope2.position.x, rope2.position.y + 15), spring_constant_k=0.01))
-    rope2.add_spring(Spring(rope2.springs[i].bob, Particle(rope2.springs[i].bob.position.x, rope2.springs[i].bob.position.y + 15), spring_constant_k=0.01))
-
 softbodies = [
-    SoftbodyCircle(Vec2(center_x, center_y), spring_constant_k = 0.1), 
-    SoftbodyCircle(Vec2(center_x, center_y), 36, spring_constant_k = 0.1),
-    SoftbodyCircle(Vec2(0, 0), 36),
-    rope,
-    rope2,
-    cloth
+    SoftbodyCircle(Vec2(center_x-200, center_y-200), spring_constant_k = 0.3, exclude_center=True), 
+    SoftbodyCircle(Vec2(center_x, center_y-200), spring_constant_k = 0.3), 
+    SoftbodyCircle(Vec2(center_x-200, center_y+10), num_particles=17, spring_constant_k=0.1),
+    SoftbodyCircle(Vec2(center_x, center_y+10), num_particles=36, spring_constant_k = 0.1),
+    SoftbodyCircle(Vec2(center_x-200, center_y+200), num_particles=17, spring_constant_k=0.01),
+    SoftbodyCircle(Vec2(center_x, center_y+200), num_particles=36, spring_constant_k = 0.01),
+    create_rope((center_x+100, center_y), 20, 0.1),
+    create_rope((center_x+200, center_y), 20, 0.01),
+    #cloth
 ]
+
 grabbing = None
 def update():
     global grabbing
@@ -173,12 +181,12 @@ def update():
             for body in softbodies:
                 for particle in body.particles:
                     if particle.rect().collidepoint(x, y):
-                        grabbing = particle
+                        grabbing = [body, particle]
         else:
-            grabbing.position.x = x
-            grabbing.position.y = y
-            grabbing.velocity.x = 0
-            grabbing.velocity.y = 0
+            grabbing[1].position.x = x
+            grabbing[1].position.y = y
+            grabbing[1].velocity.x = 0
+            grabbing[1].velocity.y = 0
 
     if pygame.mouse.get_just_released()[0]:
         grabbing = None
@@ -201,8 +209,10 @@ def update():
             spring.update()
         
 
-            
+
+prevGrabbing = None            
 def draw():
+    global prevGrabbing
     # Fill the screen with white
     screen.fill((0,0,0))
     
@@ -211,6 +221,20 @@ def draw():
             particle.draw()
         for spring in body.springs:
             spring.draw()
+
+    screen.blit(title.render(f"Spring Force = -kx", True, WHITE), (20, 20))
+    screen.blit(title.render(f"Softbody Physics", True, WHITE), (center_x-100, 20))
+    if grabbing:
+        prevGrabbing = grabbing
+        screen.blit(font.render(f"Spring Constant k = {grabbing[0].k}", True, RED), (20, 70))
+        screen.blit(font.render(f"Springs: {len(grabbing[0].springs)}", True, RED), (20, 100))
+    elif prevGrabbing:
+        screen.blit(font.render(f"Spring Constant k = {prevGrabbing[0].k}", True, (150, 150, 150)), (20, 70))
+        screen.blit(font.render(f"Springs: {len(prevGrabbing[0].springs)}", True, (150, 150, 150)), (20, 100))
+    else:
+        screen.blit(font.render("Spring Constant k =", True, (100, 100, 100)), (20, 70))
+        screen.blit(font.render(f"Springs: ", True, (100, 100, 100)), (20, 100))
+
 
     # Update the display
     pygame.display.flip()
