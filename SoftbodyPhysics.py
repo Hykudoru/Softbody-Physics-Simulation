@@ -52,7 +52,7 @@ class Particle:
     color = WHITE
     speed = 10
 
-    def __init__(self, x, y, size = particle_size, color = WHITE):
+    def __init__(self, x, y, size = particle_size, color = BLUE):
         self.position = Vec2(x, y)
         self.width = size
         self.height = size
@@ -91,10 +91,10 @@ class Spring:
         self.pivot.velocity.y *= dampen
         
     def draw(self):
-        pygame.draw.line(screen, (RED), (self.pivot.position.x, self.pivot.position.y), (self.bob.position.x, self.bob.position.y))
+        pygame.draw.line(screen, (BLUE), (self.pivot.position.x, self.pivot.position.y), (self.bob.position.x, self.bob.position.y))
 
 class Softbody(Particle):
-    def __init__(self, x, y, size = particle_size, spring_constant_k = 0.01, color = WHITE):
+    def __init__(self, x, y, size = particle_size, spring_constant_k = 0.01, color = BLUE):
         super().__init__(x, y, size, color)
         self.particles = []
         self.springs = []
@@ -113,12 +113,12 @@ class SoftbodyCircle(Softbody):
         self.springs = []
 
         if not exclude_center:
-            self.particles.append(Particle(self.position.x, self.position.y, particle_size, RED))
+            self.particles.append(Particle(self.position.x, self.position.y, particle_size, self.color))
 
         # Create particles
         angle = 360 / num_particles
         for i in range(num_particles):
-            self.particles.append(Particle(self.position.x + (radius*math.cos((math.pi*i*angle)/180)), self.position.y + (radius*math.sin((math.pi*angle*i)/180)), particle_size, WHITE))
+            self.particles.append(Particle(self.position.x + (radius*math.cos((math.pi*i*angle)/180)), self.position.y + (radius*math.sin((math.pi*angle*i)/180)), particle_size, self.color))
         
         # Create springs
         for i in range(0, len(self.particles)-1):
@@ -234,7 +234,6 @@ def draw():
     else:
         screen.blit(font.render("Spring Constant k =", True, (100, 100, 100)), (20, 70))
         screen.blit(font.render(f"Springs: ", True, (100, 100, 100)), (20, 100))
-
 
     # Update the display
     pygame.display.flip()
