@@ -42,7 +42,7 @@ def clamp(value, min, max):
     return value
 
 dampen = 0.99
-particle_size = 15
+default_particle_size = 15
 class Particle:
     position = Vec2()
     velocity = Vec2()
@@ -52,11 +52,12 @@ class Particle:
     color = WHITE
     speed = 10
 
-    def __init__(self, x, y, size = particle_size, color = BLUE):
+    def __init__(self, x, y, particle_size = default_particle_size, color = BLUE):
         self.position = Vec2(x, y)
-        self.width = size
-        self.height = size
-        self.radius = size/2
+        self.width = particle_size
+        self.height = particle_size
+        self.particle_size = particle_size
+        self.radius = particle_size/2
         self.color = color
         self.speed = 10
         self.velocity = Vec2(0, 0)
@@ -95,8 +96,8 @@ class Spring:
         pygame.draw.line(screen, (self.color), (self.pivot.position.x, self.pivot.position.y), (self.bob.position.x, self.bob.position.y))
 
 class Softbody(Particle):
-    def __init__(self, x, y, size = particle_size, spring_constant_k = 0.01, color = BLUE):
-        super().__init__(x, y, size, color)
+    def __init__(self, x, y, particle_size = default_particle_size, spring_constant_k = 0.01, color = BLUE):
+        super().__init__(x, y, particle_size, color)
         self.particles = []
         self.springs = []
         self.k = spring_constant_k
@@ -107,19 +108,20 @@ class Softbody(Particle):
             self.particles.append(spring.bob)
 
 class SoftbodyCircle(Softbody):
-    def __init__(self, position, radius = 75, num_particles = 10, spring_constant_k = 0.01, exclude_center = False):
+    def __init__(self, position, radius = 75, num_particles = 10, spring_constant_k = 0.01, exclude_center = False, particle_size = default_particle_size):
+        super().__init__(position.x, position.y, particle_size)
         self.position = Vec2(position.x, position.y)
         self.k = spring_constant_k
         self.particles = []
         self.springs = []
 
         if not exclude_center:
-            self.particles.append(Particle(self.position.x, self.position.y, particle_size, self.color))
+            self.particles.append(Particle(self.position.x, self.position.y, default_particle_size, self.color))
 
         # Create particles
         angle = 360 / num_particles
         for i in range(num_particles):
-            self.particles.append(Particle(self.position.x + (radius*math.cos((math.pi*i*angle)/180)), self.position.y + (radius*math.sin((math.pi*angle*i)/180)), particle_size, self.color))
+            self.particles.append(Particle(self.position.x + (radius*math.cos((math.pi*i*angle)/180)), self.position.y + (radius*math.sin((math.pi*angle*i)/180)), self.particle_size, self.color))
         
         # Create springs
         for i in range(0, len(self.particles)-1):
@@ -135,13 +137,13 @@ class SoftbodyCircle(Softbody):
                 self.springs.append(Spring(self.particles[i], self.particles[0], spring_constant_k=self.k))
 
 class SoftbodySquare(Softbody):
-    def __init__(self, x, y, width, height, size = particle_size, density = 4, spring_constant_k = 0.01, color = BLUE):
-        super().__init__(x, y, particle_size, color)
+    def __init__(self, x, y, width, height, particle_size = default_particle_size, density = 4, spring_constant_k = 0.01, color = BLUE):
+        super().__init__(x, y, particle_size, spring_constant_k, color)
         
-        top_left = Particle(x-(width/2), y-(height/2), size, color)
-        top_right = Particle(x+(width/2), y-(height/2), size, color)
-        bottom_right = Particle(x+(width/2), y+(height/2), size, color)
-        bottom_left = Particle(x-(width/2), y+(height/2), size, color)
+        top_left = Particle(x-(width/2), y-(height/2), self.particle_size, color)
+        top_right = Particle(x+(width/2), y-(height/2), self.particle_size, color)
+        bottom_right = Particle(x+(width/2), y+(height/2), self.particle_size, color)
+        bottom_left = Particle(x-(width/2), y+(height/2), self.particle_size, color)
         
         offset = width/(density)
         prev = None
@@ -177,7 +179,7 @@ class SoftbodySquare(Softbody):
 
 
 class Cloth(Softbody):
-    def __init__(self, position, width, height, density = 10, spring_constant_k = 0.01, particle_size=particle_size, color=WHITE):
+    def __init__(self, position, width, height, density = 10, spring_constant_k = 0.01, particle_size = default_particle_size, color=WHITE):
         super().__init__(position.x, position.y, spring_constant_k=spring_constant_k, color=color)
         self.particle_size = particle_size
         self.width = width
@@ -218,7 +220,7 @@ class Cloth(Softbody):
         for r in range(self.density):
             for c in range(self.density):
                 self.mtx[r][c].draw()
-
+                
 def create_rope(position, n_particles, k):
     rope = Softbody(position[0], position[1], spring_constant_k=k)
     for i in range(n_particles):
@@ -227,7 +229,8 @@ def create_rope(position, n_particles, k):
         rope.add_spring(Spring(rope.springs[i].bob, Particle(rope.springs[i].bob.position.x, rope.springs[i].bob.position.y + 15), spring_constant_k=k))
     return rope
 
-cloth = Cloth(origin, 400, 400, 20, particle_size=10, color=WHITE)
+# cloth = Cloth(origin, 400, 400, 20, particle_size=10, color=WHITE)
+cloth = Cloth(origin-Vec2(200, 200), 400, 400, 20, particle_size=10, color=WHITE)
 
 softbodies = [
     # SoftbodyCircle(Vec2(center_x-200, center_y-200), spring_constant_k = 0.3, exclude_center=True), 
@@ -241,7 +244,6 @@ softbodies = [
     # create_rope((center_x+200, center_y), 20, 0.01),
     cloth
 ]
-
 
 springs = [
     Spring(Particle(center_x+300, center_y, 25), Particle(center_x+300, center_y, 25)),
