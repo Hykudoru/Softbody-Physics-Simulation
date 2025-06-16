@@ -44,14 +44,6 @@ def clamp(value, min, max):
 dampen = 0.99
 default_particle_size = 15
 class Particle:
-    position = Vec2()
-    velocity = Vec2()
-    width = 10
-    height = 10
-    radius = 10
-    color = WHITE
-    speed = 10
-
     def __init__(self, x, y, particle_size = default_particle_size, color = BLUE):
         self.position = Vec2(x, y)
         self.width = particle_size
@@ -229,9 +221,6 @@ def create_rope(position, n_particles, k):
         rope.add_spring(Spring(rope.springs[i].bob, Particle(rope.springs[i].bob.position.x, rope.springs[i].bob.position.y + 15), spring_constant_k=k))
     return rope
 
-# cloth = Cloth(origin, 400, 400, 20, particle_size=10, color=WHITE)
-cloth = Cloth(origin-Vec2(200, 200), 400, 400, 20, particle_size=10, color=WHITE)
-
 softbodies = [
     # SoftbodyCircle(Vec2(center_x-200, center_y-200), spring_constant_k = 0.3, exclude_center=True), 
     # SoftbodyCircle(Vec2(center_x, center_y-200), spring_constant_k = 0.3), 
@@ -242,7 +231,7 @@ softbodies = [
     # SoftbodySquare(center_x, center_x, 200, 200, spring_constant_k=.15 , density=3),
     # create_rope((center_x+100, center_y), 20, 0.1),
     # create_rope((center_x+200, center_y), 20, 0.01),
-    cloth
+    Cloth(origin-Vec2(200, 200), 400, 400, 20, particle_size=10, color=WHITE)
 ]
 
 springs = [
@@ -258,12 +247,15 @@ def update():
             for spring in springs:
                 if spring.pivot.rect().collidepoint(mouse_x, mouse_y):
                     grabbing = [None, spring.pivot]
+                    break
                 elif spring.bob.rect().collidepoint(mouse_x, mouse_y):
                     grabbing = [None, spring.bob]
+                    break
             for body in softbodies:
                 for particle in body.particles:
                     if particle.rect().collidepoint(mouse_x, mouse_y):
                         grabbing = [body, particle]
+                        break
         else:
             grabbing[1].position.x = mouse_x
             grabbing[1].position.y = mouse_y
