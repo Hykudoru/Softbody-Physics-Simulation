@@ -87,25 +87,35 @@ class Spring:
     def draw(self):
         pygame.draw.line(screen, (self.color), (self.pivot.position.x, self.pivot.position.y), (self.bob.position.x, self.bob.position.y))
 
-class Softbody(Particle):
+class Softbody:
     def __init__(self, x, y, particle_size = default_particle_size, spring_constant_k = 0.01, color = BLUE):
-        super().__init__(x, y, particle_size, color)
+        self.position = Vec2(x, y)
+        self.particle_size = particle_size
+        self.k = spring_constant_k
+        self.color = color
         self.particles = []
         self.springs = []
-        self.k = spring_constant_k
 
     def add_spring(self, spring):
             self.springs.append(spring)
             self.particles.append(spring.pivot)
             self.particles.append(spring.bob)
+    
+    def update(self):
+        for spring in self.springs:
+            spring.update()
+        for particle in self.particles:
+            particle.update()
+
+    def draw(self):
+        for spring in self.springs:
+            spring.draw()
+        for particle in self.particles:
+            particle.draw()
 
 class SoftbodyCircle(Softbody):
-    def __init__(self, position, radius = 75, num_particles = 10, spring_constant_k = 0.01, exclude_center = False, particle_size = default_particle_size):
-        super().__init__(position.x, position.y, particle_size)
-        self.position = Vec2(position.x, position.y)
-        self.k = spring_constant_k
-        self.particles = []
-        self.springs = []
+    def __init__(self, position, radius = 75, num_particles = 10, spring_constant_k = 0.01, particle_size = default_particle_size, color = BLUE, exclude_center = False):
+        super().__init__(position.x, position.y, particle_size, spring_constant_k, color)
 
         if not exclude_center:
             self.particles.append(Particle(self.position.x, self.position.y, default_particle_size, self.color))
@@ -172,15 +182,10 @@ class SoftbodySquare(Softbody):
 
 class Cloth(Softbody):
     def __init__(self, position, width, height, density = 10, spring_constant_k = 0.01, particle_size = default_particle_size, color=WHITE):
-        super().__init__(position.x, position.y, spring_constant_k=spring_constant_k, color=color)
-        self.particle_size = particle_size
+        super().__init__(position.x, position.y, particle_size, spring_constant_k, color)
         self.width = width
         self.height = height
         self.density = density
-        self.particles = []
-        self.springs = []
-        self.k = spring_constant_k
-        self.position = position
         self.mtx = []
         for i in range(density):
             self.mtx.append([None for p in range(density)])
@@ -207,14 +212,10 @@ class Cloth(Softbody):
                     self.springs.append(Spring(pivot, bob, spring_constant_k))
                     self.particles.append(pivot)
                     self.particles.append(bob)
-                
-    def draw(self):
-        for r in range(self.density):
-            for c in range(self.density):
-                self.mtx[r][c].draw()
+
                 
 def create_rope(position, n_particles, k):
-    rope = Softbody(position[0], position[1], spring_constant_k=k)
+    rope = Softbody(position[0], position[1], particle_size=default_particle_size, spring_constant_k=k)
     for i in range(n_particles):
         if i == 0:
             rope.add_spring(Spring(Particle(rope.position.x, rope.position.y), Particle(rope.position.x, rope.position.y + 15), spring_constant_k=k))
@@ -238,6 +239,7 @@ springs = [
     Spring(Particle(center_x+300, center_y, 25), Particle(center_x+300, center_y, 25)),
     Spring(Particle(center_x+350, center_y, 25), Particle(center_x+350, center_y+100, 25)),
 ]
+
 grabbing = None
 def update():
     global grabbing
@@ -247,7 +249,6 @@ def update():
             for spring in springs:
                 if spring.pivot.rect().collidepoint(mouse_x, mouse_y):
                     grabbing = [None, spring.pivot]
-                    break
                 elif spring.bob.rect().collidepoint(mouse_x, mouse_y):
                     grabbing = [None, spring.bob]
                     break
@@ -277,10 +278,6 @@ def update():
 
     for body in softbodies:
         body.update()
-        for particle in body.particles:
-            particle.update()
-        for spring in body.springs:
-            spring.update()
 
     for spring in springs:
         spring.update()
@@ -293,17 +290,14 @@ def draw():
     # Fill the screen with white
     screen.fill((0,0,0))
     
+    for body in softbodies:
+        body.draw()
+        
     for spring in springs:
         spring.draw()
         spring.bob.draw()
         spring.pivot.draw()
 
-    for body in softbodies:
-        body.draw()
-        for particle in body.particles:
-            particle.draw()
-        for spring in body.springs:
-            spring.draw()
 
     screen.blit(title.render(f"Spring Force = -kx", True, WHITE), (20, 20))
     screen.blit(title.render(f"Softbody Physics", True, WHITE), (center_x-100, 20))
