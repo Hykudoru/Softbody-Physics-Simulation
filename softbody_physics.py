@@ -246,26 +246,6 @@ springs = [
 
 grabbing = None
 def update():
-    global grabbing
-    (mouse_x, mouse_y) = pygame.mouse.get_pos()
-    if pygame.mouse.get_pressed()[0]:
-        if grabbing == None:
-            for particle in Particle.s_particles:
-                if particle.rect().collidepoint(mouse_x, mouse_y):
-                    grabbing = [None, particle]
-                    for body in softbodies:
-                        if particle in body.particles:
-                            grabbing = [body, particle]
-                            break
-        else:
-            grabbing[1].position.x = mouse_x
-            grabbing[1].position.y = mouse_y
-            grabbing[1].velocity.x = 0
-            grabbing[1].velocity.y = 0
-
-    if pygame.mouse.get_just_released()[0]:
-        grabbing = None
-
     for spring in Spring.s_springs:
         spring.update()
 
@@ -302,10 +282,30 @@ def draw():
 
 # The game loop
 running = True
+mouse_pressed = False
 while running:
+    (mouse_x, mouse_y) = pygame.mouse.get_pos()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_pressed = True
+            if grabbing == None:
+                for particle in Particle.s_particles:
+                    if particle.rect().collidepoint(mouse_x, mouse_y):
+                        grabbing = [None, particle]
+                        for body in softbodies:
+                            if particle in body.particles:
+                                grabbing = [body, particle]
+                                break
+        elif event.type == pygame.MOUSEBUTTONUP:
+            grabbing = None
+            mouse_pressed = False
+        if mouse_pressed and grabbing:
+            grabbing[1].position.x = mouse_x
+            grabbing[1].position.y = mouse_y
+            grabbing[1].velocity.x = 0
+            grabbing[1].velocity.y = 0
     update()
     draw()
     # Control the frame rate
