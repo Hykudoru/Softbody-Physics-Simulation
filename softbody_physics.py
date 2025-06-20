@@ -227,15 +227,15 @@ def create_rope(position, n_particles, k):
     return rope
 
 softbodies = [
-    SoftbodyCircle(Vec2(center_x-200, center_y-200), spring_constant_k = 0.3, exclude_center=True), 
-    SoftbodyCircle(Vec2(center_x, center_y-200), spring_constant_k = 0.3), 
-    SoftbodyCircle(Vec2(center_x-200, center_y+10), num_particles=17, spring_constant_k=0.1),
-    SoftbodyCircle(Vec2(center_x, center_y+10), num_particles=36, spring_constant_k = 0.1),
-    SoftbodyCircle(Vec2(center_x-200, center_y+200), num_particles=17, spring_constant_k=0.01),
-    SoftbodyCircle(Vec2(center_x, center_y+200), num_particles=36, spring_constant_k = 0.01),
-    SoftbodySquare(center_x, center_x, 200, 200, spring_constant_k=.15 , density=3),
-    create_rope((center_x+100, center_y), 20, 0.1),
-    create_rope((center_x+200, center_y), 20, 0.01),
+    # SoftbodyCircle(Vec2(center_x-200, center_y-200), spring_constant_k = 0.3, exclude_center=True), 
+    # SoftbodyCircle(Vec2(center_x, center_y-200), spring_constant_k = 0.3), 
+    # SoftbodyCircle(Vec2(center_x-200, center_y+10), num_particles=17, spring_constant_k=0.1),
+    # SoftbodyCircle(Vec2(center_x, center_y+10), num_particles=36, spring_constant_k = 0.1),
+    # SoftbodyCircle(Vec2(center_x-200, center_y+200), num_particles=17, spring_constant_k=0.01),
+    # SoftbodyCircle(Vec2(center_x, center_y+200), num_particles=36, spring_constant_k = 0.01),
+    # SoftbodySquare(center_x, center_x, 200, 200, spring_constant_k=.15 , density=3),
+    # create_rope((center_x+100, center_y), 20, 0.1),
+    # create_rope((center_x+200, center_y), 20, 0.01),
     Cloth(origin-Vec2(200, 200), 400, 400, 20, particle_size=10, color=WHITE)
 ]
 
@@ -244,7 +244,6 @@ springs = [
     Spring(Particle(center_x+350, center_y, 25), Particle(center_x+350, center_y+100, 25)),
 ]
 
-grabbing = None
 def update():
     for spring in Spring.s_springs:
         spring.update()
@@ -283,6 +282,7 @@ def draw():
 # The game loop
 running = True
 mouse_pressed = False
+grabbing = None
 while running:
     (mouse_x, mouse_y) = pygame.mouse.get_pos()
     for event in pygame.event.get():
