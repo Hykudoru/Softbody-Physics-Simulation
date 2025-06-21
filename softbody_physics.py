@@ -2,9 +2,6 @@ import pygame
 import random
 import math
 import time
-pygame.init()
-title = pygame.font.SysFont("Arial", 30)
-font = pygame.font.SysFont('Arial', 20)
 
 class Vec2:
     def __init__(self, x = 0, y = 0):
@@ -42,13 +39,11 @@ def clamp(value, min, max):
     return value
 
 dampen = 0.99
-default_particle_size = 15
 class Particle:
+    default_particle_size = 15
     s_particles = []
     def __init__(self, x, y, particle_size = default_particle_size, color = BLUE):
         self.position = Vec2(x, y)
-        self.width = particle_size
-        self.height = particle_size
         self.particle_size = particle_size
         self.radius = particle_size/2
         self.color = color
@@ -64,7 +59,7 @@ class Particle:
         pygame.draw.circle(screen, self.color, (self.position.x, self.position.y), self.radius)
         
     def rect(self):
-        return pygame.Rect(self.position.x-self.radius, self.position.y-self.radius, self.width, self.height)
+        return pygame.Rect(self.position.x-self.radius, self.position.y-self.radius, self.radius*2, self.radius*2)
     
 class Spring:
     s_springs = []
@@ -92,7 +87,7 @@ class Spring:
         pygame.draw.line(screen, (self.color), (self.pivot.position.x, self.pivot.position.y), (self.bob.position.x, self.bob.position.y))
 
 class Softbody:
-    def __init__(self, x, y, particle_size = default_particle_size, spring_constant_k = 0.01, color = BLUE):
+    def __init__(self, x, y, particle_size = Particle.default_particle_size, spring_constant_k = 0.01, color = BLUE):
         self.position = Vec2(x, y)
         self.particle_size = particle_size
         self.k = spring_constant_k
@@ -118,11 +113,11 @@ class Softbody:
             particle.draw()
 
 class SoftbodyCircle(Softbody):
-    def __init__(self, position, radius = 75, num_particles = 10, spring_constant_k = 0.01, particle_size = default_particle_size, color = BLUE, exclude_center = False):
+    def __init__(self, position, radius = 75, num_particles = 10, spring_constant_k = 0.01, particle_size = Particle.default_particle_size, color = BLUE, exclude_center = False):
         super().__init__(position.x, position.y, particle_size, spring_constant_k, color)
 
         if not exclude_center:
-            self.particles.append(Particle(self.position.x, self.position.y, default_particle_size, self.color))
+            self.particles.append(Particle(self.position.x, self.position.y, particle_size, self.color))
 
         # Create particles
         angle = 360 / num_particles
@@ -143,7 +138,7 @@ class SoftbodyCircle(Softbody):
                 self.springs.append(Spring(self.particles[i], self.particles[0], spring_constant_k=self.k))
 
 class SoftbodySquare(Softbody):
-    def __init__(self, x, y, width, height, particle_size = default_particle_size, density = 4, spring_constant_k = 0.01, color = BLUE):
+    def __init__(self, x, y, width, height, particle_size = Particle.default_particle_size, density = 4, spring_constant_k = 0.01, color = BLUE):
         super().__init__(x, y, particle_size, spring_constant_k, color)
         
         top_left = Particle(x-(width/2), y-(height/2), self.particle_size, color)
@@ -185,7 +180,7 @@ class SoftbodySquare(Softbody):
 
 
 class Cloth(Softbody):
-    def __init__(self, position, width, height, density = 10, spring_constant_k = 0.01, particle_size = default_particle_size, color=WHITE):
+    def __init__(self, position, width, height, density = 10, spring_constant_k = 0.01, particle_size = Particle.default_particle_size, color=WHITE):
         super().__init__(position.x, position.y, particle_size, spring_constant_k, color)
         self.width = width
         self.height = height
@@ -217,14 +212,21 @@ class Cloth(Softbody):
                     self.particles.append(pivot)
                     self.particles.append(bob)
 
-                
 def create_rope(position, n_particles, k):
-    rope = Softbody(position[0], position[1], particle_size=default_particle_size, spring_constant_k=k)
+    rope = Softbody(position[0], position[1], particle_size=Particle.default_particle_size, spring_constant_k=k)
     for i in range(n_particles):
         if i == 0:
             rope.add_spring(Spring(Particle(rope.position.x, rope.position.y), Particle(rope.position.x, rope.position.y + 15), spring_constant_k=k))
         rope.add_spring(Spring(rope.springs[i].bob, Particle(rope.springs[i].bob.position.x, rope.springs[i].bob.position.y + 15), spring_constant_k=k))
     return rope
+
+pygame.init()
+title = pygame.font.SysFont("Arial", 30)
+font = pygame.font.SysFont('Arial', 20)
+
+mouse_pressed = False
+prevGrabbing = None   
+grabbing = None
 
 softbodies = [
     # SoftbodyCircle(Vec2(center_x-200, center_y-200), spring_constant_k = 0.3, exclude_center=True), 
@@ -251,7 +253,7 @@ def update():
     for particle in Particle.s_particles:
         particle.update()
         
-prevGrabbing = None            
+         
 def draw():
     global prevGrabbing
     # Fill the screen with white
@@ -281,8 +283,6 @@ def draw():
 
 # The game loop
 running = True
-mouse_pressed = False
-grabbing = None
 while running:
     (mouse_x, mouse_y) = pygame.mouse.get_pos()
     for event in pygame.event.get():
@@ -301,11 +301,11 @@ while running:
         elif event.type == pygame.MOUSEBUTTONUP:
             grabbing = None
             mouse_pressed = False
-        if mouse_pressed and grabbing:
-            grabbing[1].position.x = mouse_x
-            grabbing[1].position.y = mouse_y
-            grabbing[1].velocity.x = 0
-            grabbing[1].velocity.y = 0
+    if mouse_pressed and grabbing:
+        grabbing[1].position.x = mouse_x
+        grabbing[1].position.y = mouse_y
+        grabbing[1].velocity.x = 0
+        grabbing[1].velocity.y = 0
     update()
     draw()
     # Control the frame rate
