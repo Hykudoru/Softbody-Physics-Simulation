@@ -179,9 +179,9 @@ class Cloth(Softbody):
             self.mtx.append([None for p in range(density)])
 
         for r in range(density):
-            vert_offset = r * (width/density)
+            vert_offset = r * (height/density)
             for c in range(density):
-                horiz_offset = c*(height/density)
+                horiz_offset = c*(width/density)
                 self.mtx[r][c] = Particle(self.position.x + horiz_offset, self.position.y + vert_offset, self.particle_size, color=self.color)
 
         for r in range(self.density):
@@ -250,7 +250,6 @@ if __name__ == "__main__":
 
         for particle in Particle.s_particles:
             particle.update()
-            
             
     def draw():
         global prevGrabbing
